@@ -30,10 +30,6 @@ Main sentence:
 
 ## MEMORY TRIGGER
 
-**What → How → Runtime → Production**
-
----
-
 # 1. FOUNDATION & MODULE FEDERATION — 0:02–0:09
 
 ## 1.1 WHAT IS SITE MANAGER?

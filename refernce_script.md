@@ -1,30 +1,12 @@
 # SITE MANAGER — 45-MINUTE KT SPEAKER REFERENCE
 
-Keywords and flow:
-
+**Presentation flow:**  
 **WHAT → ARCHITECTURE → FEATURES → DATA → APIs → DEV → DEPLOYMENT → HANDOVER**
 
-Main sentence:
+**Core description:**
 
 > **Site Manager is a building-management UI delivered as a Module Federation remote, where REST gives us the state and SignalR gives us live updates.**
-
 ---
-
-# TIMELINE AT A GLANCE
-
-| Time | Block | Memory phrase |
-|---|---|---|
-| 0:00–0:02 | Opening | What → How → Runtime → Production |
-| 0:02–0:09 | Foundation + Module Federation | Remote → Shell, REST = initial, SignalR = live |
-| 0:09–0:14 | Dashboard | One subscription → many widgets |
-| 0:14–0:18 | Alarms | Page + Summary |
-| 0:18–0:24 | Equipment (Thermostats, Lights, TC500) | List → Click → Optimistic → API → SignalR |
-| 0:24–0:28 | Configuration, Points, Reports | POST = show, PUT = hide |
-| 0:28–0:32 | State management | Four homes |
-| 0:32–0:35 | APIs | Data / Platform / Live |
-| 0:35–0:39 | Dev workflow | Run → Test → Lint → Build → CI |
-| 0:39–0:42 | Build and deploy | Build once, configure at runtime |
-| 0:42–0:45 | Known issues, handover, conclusion | Run → Read → Trace → Verify |
 
 ---
 
@@ -45,13 +27,9 @@ Main sentence:
 
 ## SAY
 
-"Hello everyone. For the next 45 minutes I'll be handing over the Site Manager application.
+"Hello everyone. For the next 30 minutes I'll be handing over the Site Manager application.
 
 We will cover what it is, how the code is organised, how it runs at runtime, and how it gets to production.
-
-The agenda is: architecture, the main features, state and data flow, APIs, the developer workflow, deployment, known issues, and then questions.
-
-Please hold questions for the end unless something blocks you from following. I have a parking lot for anything we run out of time on."
 
 ## DO
 
@@ -61,17 +39,11 @@ Please hold questions for the end unless something blocks you from following. I 
 4. Open the Site Manager application.
 5. Show the Dashboard.
 
-## EXTRA POINTS
+## IMPORTANT / EXTRA POINTS
 
 * Repo: `HCECBP-SiteManagerApp`. The app code is under `src/app`; deployment manifests are under `deploy/`.
 * Stack: React 18, TypeScript 5, Webpack 5, Tailwind, `@forge/common`, React Query v4, SignalR, LaunchDarkly, Jest, Husky, Yarn.
-* Always use `yarn`, never `npm`.
-
-## MEMORY TRIGGER
-
-**What → How → Runtime → Production**
-
----
+* Always use `yarn`.
 
 # 1. FOUNDATION & MODULE FEDERATION — 0:02–0:09
 
@@ -83,7 +55,9 @@ Please hold questions for the end unless something blocks you from following. I 
 
 The basic data hierarchy is Organization, then Site, then Asset, then Point.
 
-An asset is a piece of equipment, such as a thermostat or light. A point is an individual value on that equipment, such as temperature, setpoint, mode or on/off status."
+An asset is a piece of equipment, such as a thermostat or light. A point is an individual value on that equipment, such as temperature, setpoint, mode or on/off status.
+
+Organization and Site IDs come from the unified-shell (`sites` prop) and are used in almost every URL: `/api/v1/orgs/{orgId}/sites/{siteId}/...`."
 
 ### DO
 
@@ -95,7 +69,7 @@ Say:
 
 "Here the thermostat is the asset, and this temperature value is one of its points."
 
-### EXTRA POINTS
+### IMPORTANT / EXTRA POINTS
 
 * Organization and Site IDs come from the shell (`sites` prop) and are used in almost every URL: `/api/v1/orgs/{orgId}/sites/{siteId}/...`.
 * A gateway is the device that connects the assets to the cloud. Writes go to a gateway (`/gateways/{id}/SetPointValues`).
@@ -110,8 +84,7 @@ Say:
 "The most important architectural fact about this repository is that it is not a standalone application. It is a Module Federation remote called siteManagerApp.
 
 The unified shell loads this application at runtime.
-
-A simple way to think about it is a shopping mall. The unified shell is the mall, and Site Manager is one shop. We can update the shop without rebuilding the entire mall."
+"
 
 ### DO
 
@@ -138,13 +111,11 @@ The remote entry is the front door that the shell loads.
 
 The application exposes the different Site Manager pages, including Dashboard, Alarms, Thermostats, Lights, Reports, Configuration, Points and Others."
 
-### EXTRA POINTS
+### IMPORTANT / EXTRA POINTS
 
-* **Host = unified shell. Remote = Site Manager.** The host decides when to load us.
-* The plugin is `@module-federation/enhanced` (not the old built-in webpack plugin).
+* **Host = unified shell. Remote = Site Manager.** The host decides when to load what.
 * There are 8 exposes. Adding a page means adding an entry in `exposes`.
-* The entry file is named `remoteEntry.[contenthash].js`. The hash changes when the build changes, so the shell resolves the entry by its URL rather than a fixed name.
-* `publicPath: 'auto'` means chunks are loaded relative to where `remoteEntry` was loaded from, so the same build works on any host URL.
+* The entry file is named `remoteEntry.[contenthash].js`
 * Think of `remoteEntry` as a **menu**: it lists what we expose and what we share. The shell reads the menu, then loads only what it needs.
 * To see it locally: build and look in `dist/` for the `remoteEntry` file.
 
@@ -174,12 +145,11 @@ and
 
 "There is no normal router in this repository because the shell owns the routing."
 
-### EXTRA POINTS
+### IMPORTANT / EXTRA POINTS
 
 * `src/index.ts` is intentionally almost empty. It is a stub entry; the real entry points are the exposes.
 * `onTriggerActions` is how we ask the shell to do something (for example navigate to Alarms). We never navigate ourselves.
-* `userDetails` carries the user context; `sites` carries the site list. The code uses `sites[0]`.
-* If the shell changes these props, our pages break. Treat them as a **public contract**.
+* `userDetails` carries the user context; `sites` carries the site list.
 
 ---
 
@@ -187,20 +157,15 @@ and
 
 ### SAY
 
-"React, React DOM, React Query and @hcecbp/provider are shared as singletons.
-
-This is important because we don't want multiple copies of React or provider libraries running in the same application."
+"React, React DOM, React Query and @hcecbp/provider are shared as singletons."
 
 ### DO
 
 Show the `shared` section in webpack.
 
-### EXTRA POINTS
+### IMPORTANT / EXTRA POINTS
 
-* Singletons: `react`, `react-dom`, `@tanstack/react-query`, `@hcecbp/provider`. All are marked `eager`.
 * Why `@hcecbp/provider` matters: it gives us `useClient` (auth token) from the shell. A second copy would not see the shell's context.
-* Version mismatch with the shell shows up as console warnings or a blank screen. Check shared versions first.
-* Known oddity: one shared entry in `environment.ts` has `requiredVersion: 'sitemanagerapp'`, which looks wrong. Confirm before changing.
 
 ---
 
@@ -226,7 +191,7 @@ Then:
 
 "Read permission is required to see the application. Write permission is enforced at the widget level."
 
-### EXTRA POINTS
+### IMPORTANT / EXTRA POINTS
 
 * There is **one** `QueryClient`, created in the provider. Every page shares it when mounted through the provider.
 * Permissions come from the Buildings Manager API.
@@ -236,52 +201,6 @@ Then:
 ---
 
 # 1.6 REST + SIGNALR
-
-## MOST IMPORTANT MEMORY
-
-**REST = INITIAL**
-
-**SIGNALR = LIVE**
-
-### SAY
-
-"Data arrives in two main ways.
-
-REST through React Query gives us lists and initial state.
-
-SignalR gives us live updates."
-
-### DO
-
-Open:
-
-`useSignalRSubscription.ts`
-
-Then:
-
-Browser → DevTools → Network → WS
-
-Show a SignalR frame.
-
-### SAY
-
-"When something changes in the field, SignalR sends an update. The page receives it, merges it into the local state and the widget updates without needing to refetch everything."
-
-### MEMORY
-
-**REST starts the screen.**
-
-**SignalR keeps the screen alive.**
-
-### EXTRA POINTS
-
-* Hub library: `@microsoft/signalr` 8.
-* Hook: `useSignalRSubscription`. You pass a group and a handler, it manages connect, subscribe and cleanup.
-* Reconnect uses increasing delays, up to 10 attempts.
-* Reports and the Alarms list do not use SignalR. Only the Dashboard, equipment and the alarm summary do.
-* To debug live data: DevTools, Network, WS, then read the frames.
-
----
 
 # 1.7 FEATURE FLAGS
 
@@ -303,9 +222,9 @@ Run:
 
 `yarn test:fast LDFlagUtils`
 
-### EXTRA POINTS
+### IMPORTANT / EXTRA POINTS
 
-* Flags let us turn features on or off **without a deployment**. This is the first response to a production issue.
+* Flags let us turn features on or off. 
 * Key flag names: `configureWidget`, `enableSchedules`, `enableTc500`, `tc500ModeCustomizations`.
 * Flags are read through a utility, not directly from the LaunchDarkly client, so new flags should be added there.
 * When adding a flag: add it to LaunchDarkly, add it to `LDFlagUtils.ts`, write a test for both states.
@@ -326,7 +245,7 @@ Point left and right.
 
 On mobile, it switches between sections using a segmented control."
 
-### EXTRA POINTS
+### IMPORTANT / EXTRA POINTS
 
 * Summary column includes alarm severity counts and energy (verify the full widget list on screen).
 * Desktop and mobile are separate render paths (for example `ReportsPageContent` vs `ReportsPageMobile`). A fix on one often needs the same fix on the other.
@@ -395,7 +314,7 @@ The order is updated optimistically. The API is called, and if the API fails, th
 
 Drag a card.
 
-### EXTRA POINTS
+### IMPORTANT / EXTRA POINTS
 
 * This is the same pattern as every write in the app: **update UI, call API, revert on failure, toast the error**.
 * Order is saved through the API (verify whether it is per user or per site).
@@ -410,7 +329,7 @@ Drag a card.
 
 It polls periodically, with 10 minutes as the default interval, and pauses when the browser tab is hidden."
 
-### EXTRA POINTS
+### IMPORTANT / EXTRA POINTS
 
 * Energy is polled over REST, not pushed over SignalR.
 * CEM = the energy management bundle. No bundle means no widget and no error.
@@ -462,7 +381,7 @@ Filter:
 
 Change a filter and show the request.
 
-### EXTRA POINTS
+### IMPORTANT / EXTRA POINTS
 
 * It is a **POST for reads**, because filters go in the body. Do not be surprised by this.
 * The query key includes org, site, page, search, sort and filters, so any change refetches.
@@ -489,7 +408,7 @@ Open:
 
 Then show a Dashboard equipment card with a severity border.
 
-### EXTRA POINTS
+### IMPORTANT / EXTRA POINTS
 
 * `AlarmContext` holds the summary for the whole site, so any widget can read it.
 * Known gap: there is no per-asset REST fallback. If SignalR misses an update, the card can be stale until reload.
@@ -498,22 +417,6 @@ Then show a Dashboard equipment card with a severity border.
 ---
 
 # 4. EQUIPMENT CONTROL — 0:18–0:24
-
-## MAIN MEMORY
-
-**LIST → CLICK → OPTIMISTIC → API → SIGNALR**
-
-### SAY
-
-"Thermostats and Lights follow a similar pattern.
-
-We load the assets, display a widget for each asset, allow the user to make a change, update the UI optimistically, send the command and then receive confirmation through SignalR."
-
-### DO
-
-Open Thermostats.
-
----
 
 # 4.1 SETPOINT API
 
@@ -533,7 +436,7 @@ Endpoint:
 
 `POST /gateways/{gatewayId}/SetPointValues`
 
-### EXTRA POINTS
+### IMPORTANT / EXTRA POINTS
 
 * The command ID lets us match the later SignalR confirmation to the request we sent.
 * Lights and Thermostats share this one write path.
@@ -591,7 +494,7 @@ On a test site:
 
 "One important detail: there is no unit conversion in this logic. Units are display-only."
 
-### EXTRA POINTS
+### IMPORTANT / EXTRA POINTS
 
 * `useUpdateSchedule` hardcodes `°C`. For a site that uses °F this would be wrong.
 * Schedule editing has a permission gate bug. Confirm the behaviour before changing it.
@@ -622,7 +525,7 @@ Find:
 
 "One fragile area to be aware of is that getSliderConfigForMode can trigger writes during render."
 
-### EXTRA POINTS
+### IMPORTANT / EXTRA POINTS
 
 * TC500 detection is by model name, so a new model naming scheme would need a code change.
 * Both `enableTc500` and `tc500ModeCustomizations` must be considered when debugging.
@@ -660,7 +563,7 @@ Hiding an asset uses PUT.
 
 The UI is optimistic and reverts if the request fails."
 
-### EXTRA POINTS
+### IMPORTANT / EXTRA POINTS
 
 * Known bug: `Configuration.tsx` spreads `{...sites}` (an array) where a single site is expected. Do not copy this pattern.
 * `removeConfiguration` ignores the `type` argument.
@@ -688,7 +591,7 @@ Otherwise show:
 
 `handleApply`
 
-### EXTRA POINTS
+### IMPORTANT / EXTRA POINTS
 
 * Needs **both** the `ConfigureWidget` permission and the `configureWidget` flag.
 * Re-subscribing after apply is what makes new points start updating without a page reload.
@@ -714,7 +617,7 @@ Open:
 
 "The download fetches a blob, creates an object URL and triggers a temporary download link."
 
-### EXTRA POINTS
+### IMPORTANT / EXTRA POINTS
 
 * The app has **no fixed list of reports**. It shows whatever the backend returns for the site. Each item has only `id`, `name` and `createdDate`.
 * List: `GET /api/v1/orgs/{o}/sites/{s}/reports` with `Page`, `PerPage`, `Search`, `SortBy`, `Sort`.
@@ -786,7 +689,7 @@ This means switching sites produces a different cache entry."
 
 "Hooks own the API calls. Components do not call fetch directly."
 
-### EXTRA POINTS
+### IMPORTANT / EXTRA POINTS
 
 * Example key: `['reports', orgId, siteId, page, perPage, search, sort, order]`.
 * Anything that changes the response must be in the key, or the cache will show wrong data.
@@ -808,7 +711,7 @@ The hook uses sorted IDs, a serialized subscription key and a ref for the latest
 
 "One known weakness is that the provider context value is rebuilt on every render, which can cause additional subscriptions."
 
-### EXTRA POINTS
+### IMPORTANT / EXTRA POINTS
 
 * Fix idea: memoise the provider context value.
 * Symptom to watch for: repeated subscribe frames in Network, WS.
@@ -859,7 +762,7 @@ The hook uses sorted IDs, a serialized subscription key and a ref for the latest
 
 We get the token provider from the shell, build the query key, get a fresh token, construct the URL with organisation and site IDs, call fetch with authorization, check the response and return the JSON."
 
-### EXTRA POINTS
+### IMPORTANT / EXTRA POINTS
 
 * Base URLs come from `environment.ts`, which reads the runtime-injected values.
 * Token comes from `useClient('findApi')`. We never store tokens ourselves.
@@ -901,41 +804,6 @@ Full list is in `KT/09-APIs-and-Endpoints.md`.
 ---
 
 # 9. DEV WORKFLOW — 0:35–0:39
-
-# MEMORY
-
-**RUN → TEST → LINT → BUILD → CI**
-
-### COMMANDS
-
-`yarn host`
-
-`yarn start`
-
-`yarn test:fast`
-
-`yarn test`
-
-`yarn lint:all`
-
-`yarn format:all`
-
-`yarn build`
-
-### SAY
-
-"These are the main commands we use during development."
-
-### EXTRA POINTS
-
-* `yarn host` runs the app inside a local host for layout work; `yarn start` runs the standalone dev server (verify against `package.json` before the session).
-* `yarn test:fast` is for quick feedback; run full `yarn test` with coverage before a PR.
-* Target coverage is at least 80%.
-* New component = folder with `.tsx`, `.spec.tsx`, `.stories.tsx`, and the copyright header.
-* Tailwind only. No custom CSS and no inline styles.
-* Imports use aliases like `@components/*`.
-
----
 
 # 9.1 LINT
 
@@ -987,7 +855,7 @@ SignalR is mocked globally, so tests don't establish real SignalR connections."
 
 "Never bypass the checks using --no-verify."
 
-### EXTRA POINTS
+### IMPORTANT / EXTRA POINTS
 
 * Husky runs the hooks. See `HUSKY_SETUP.md` and `HUSKY_QUICK_REFERENCE.md` in the repo root.
 * If a hook fails, fix the cause; do not skip it.
@@ -997,36 +865,6 @@ SignalR is mocked globally, so tests don't establish real SignalR connections."
 
 # 10. BUILD & DEPLOYMENT — 0:39–0:42
 
-# MOST IMPORTANT MEMORY
-
-## BUILD ONCE → CONFIGURE AT RUNTIME
-
-### DO
-
-Open:
-
-`setup.cake`
-
-Then:
-
-`Dockerfile`
-
-Then:
-
-`env-variables.sh`
-
-### SAY
-
-"The React application is built into dist.
-
-The Docker image contains the static application and nginx."
-
-Then the key point:
-
-"The same image can be used across environments."
-
----
-
 # 10.1 ENVIRONMENT INJECTION
 
 ### SAY
@@ -1034,18 +872,6 @@ Then the key point:
 "The application contains placeholders such as $SiteManagerApiBaseUrl.
 
 When the container starts, the startup script uses environment variables to replace those placeholders."
-
-### MEMORY
-
-**Same image. Different environment variables.**
-
-### EXTRA POINTS
-
-* Build output includes an `env.[contenthash].js` chunk holding the placeholders. `envsubst` rewrites it at container start.
-* New variable checklist: placeholder in code, entry in the startup script, value in each environment's deployment file.
-* Deploy folders: `deploy/application`, `deploy/acceptance`, `deploy/performance`, `deploy/featureToggle`.
-
----
 
 # 10.2 NGINX / KUBERNETES
 
@@ -1067,7 +893,7 @@ Then:
 
 `aks-deployment.yml`
 
-### EXTRA POINTS
+### IMPORTANT / EXTRA POINTS
 
 * There are both AKS and OpenShift deployment files. Check which one your environment uses.
 * nginx has no `/health/*` route. Confirm what the probes actually hit.
@@ -1075,102 +901,13 @@ Then:
 
 ---
 
-# 11. KNOWN ISSUES — 0:42–0:43
 
-Do NOT try to memorize the entire tech-debt list.
 
-The six to know:
+# 13. DEPLOYMENT — 0:44–0:45
 
-## 1. Configuration
-
-`{...sites}` spread.
-
-## 2. Dashboard
-
-`siteId` vs `id`.
-
-## 3. Schedule
-
-Hardcoded °C / edit permission behavior.
-
-## 4. SignalR
-
-Provider context can cause extra subscriptions.
-
-## 5. TC500
-
-Potential write during render.
-
-## 6. Deployment
-
-Health endpoints and remoteEntry caching need confirmation.
-
-### SAY
-
-"These are the areas I would look at first when taking ownership."
-
-### PRIORITY
-
-| Risk | Impact | Effort |
-|---|---|---|
-| TC500 write during render | Unexpected device writes | Small |
-| Provider context rebuilt | Extra subscriptions | Small |
-| Config `{...sites}` spread | Wrong data sent | Small |
-| Dashboard `siteId` vs `id` | Wrong site in some calls | Small |
-| Schedule hardcoded °C | Wrong units | Medium |
-| Deployment health and caching | Rollout surprises | Needs confirmation |
-
----
-
-# 12. NEW OWNER HANDOVER — 0:43–0:44
-
-### SAY
-
-"If I were taking ownership of this application, my first steps would be:
-
-First, run yarn host and yarn test:fast.
-
-Second, read KT.md.
-
-Third, trace one complete feature end to end.
-
-The thermostat power toggle is a good example because it takes us from the UI, through the API, and back through SignalR.
-
-Fourth, pick one small known issue and fix it with a test. That is the fastest way to learn the codebase."
-
-### FIRST-WEEK CHECKLIST
-
-* Get repo access, run `yarn install`, then `yarn host`.
-* Get LaunchDarkly access and a test site in the shell.
-* Read `KT.md`, then `KT/09` (APIs) and `KT/10` (Module Federation).
-* Confirm backend contacts for Site Manager API, Buildings Manager API and the SignalR hub.
-* Confirm the deployment runbook and rollback process.
-
----
-
-# 13. CONCLUSION — 0:44–0:45
-
-# FIVE THINGS
-
-## 1. ARCHITECTURE
-
-**Federated React remote**
-
-## 2. STATE
-
-**REST + React Query**
-
-## 3. LIVE DATA
-
-**SignalR**
-
-## 4. WRITES
-
-**Optimistic + revert/confirmation**
-
-## 5. DEPLOYMENT
-
-**Same image + runtime configuration**
+branch to master then deploy
+say perf env
+say QA env
 
 ---
 
@@ -1275,111 +1012,3 @@ No. Same app, separate render paths for some pages.
 The unified shell team. Confirm contacts before the KT ends.
 
 ---
-
-# IF YOU ARE RUNNING OUT OF TIME
-
-| Cut | Saves |
-|---|---|
-| Skip the drag-and-drop demo | 1 min |
-| Skip the 800 ms debounce demo | 1 min |
-| Show TC500 as a slide-only mention | 1 min |
-| Skip the lint rules detail | 1 min |
-| Compress the state section to the four-homes list | 2 min |
-
-**Never cut:** Module Federation, REST vs SignalR, the optimistic-write pattern, build once and configure at runtime, and the handover steps.
-
-# IF YOU ARE RUNNING AHEAD
-
-* Trace the thermostat power toggle end to end live.
-* Show a hook test and run it.
-* Show the `dist/` folder and find `remoteEntry`.
-* Walk through the known-issues table in more detail.
-
-# PARKING LOT
-
-Write unanswered questions here during the session and send answers afterwards:
-
-*
-*
-*
-
----
-
-# LAST-MINUTE 60-SECOND REVISION
-
-Before the KT starts, look at only this:
-
-```text
-SITE MANAGER
-Building management UI
-
-ARCHITECTURE
-Org → Site → Asset → Point
-Remote → Unified Shell
-Name → Exposes → Props
-
-PROVIDER
-Toast + Query + SignalR + Permissions
-
-DATA
-REST = Initial
-SignalR = Live
-
-DASHBOARD
-Summary + HVAC + Lights
-One subscription → many widgets
-Drag → Optimistic → API → Revert
-
-ALARMS
-Page + Summary
-alarmdetails
-REST → SignalR
-
-EQUIPMENT
-List → Click → Optimistic → API → SignalR
-SetPointValues
-0.5 step
-800ms debounce
-
-TC500
-Slider + Schedule + Limits
-WARNING: write during render
-
-CONFIG
-POST = Show
-PUT = Hide
-Control → Point Role → Apply → Resubscribe
-
-REPORTS
-List + Search + Sort + PDF
-No fixed list; backend decides
-
-STATE
-React Query = Server
-SignalR = Live
-Context = Shared
-Component = Local
-
-APIs
-Site Manager = Data
-Buildings Manager = Platform
-SignalR = Live
-
-DEV
-Run → Test → Lint → Build → CI
-
-DEPLOY
-Build → Docker → nginx
-Same image
-Runtime env injection
-Port 3000
-
-ENDING
-Federated React
-REST
-SignalR
-Optimistic writes
-Same image / runtime config
-```
-
-**If you get stuck while presenting:** don't try to recall the exact sentence. Look at the current section heading, explain it in your own words, and then do the corresponding screen action. That will sound much more natural than memorizing a 45-minute script.
